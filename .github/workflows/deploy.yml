@@ -1,4 +1,4 @@
-name: Deploy to ECS
+name: Deploy to ECS with Terraform
 
 on:
   push:
@@ -8,9 +8,7 @@ env:
   AWS_REGION: us-west-2
   ECR_REGISTRY: 880958245574.dkr.ecr.us-west-2.amazonaws.com
   ECR_REPOSITORY: task13/zaeem
-  ECS_SERVICE: Task13-ECS-Service-Zaeem
-  ECS_CLUSTER: Task13-ECS-Cluster-Zaeem
-  CONTAINER_NAME: NodeJS-App
+  TF_VERSION: 1.6.0
 
 jobs:
   deploy:
@@ -31,7 +29,7 @@ jobs:
       id: login-ecr
       uses: aws-actions/amazon-ecr-login@v1
     
-    - name: Build and push
+    - name: Build, tag, and push image to ECR
       id: build-image
       env:
         ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
@@ -40,27 +38,32 @@ jobs:
         docker build -t $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG .
         docker push $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
         echo "image=$ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG" >> $GITHUB_OUTPUT
+        echo "image_tag=$IMAGE_TAG" >> $GITHUB_OUTPUT
     
-    - name: Download task definition
-      run: |
-        aws ecs describe-task-definition --task-definition $(aws ecs describe-services --cluster $ECS_CLUSTER --services $ECS_SERVICE --query 'services[0].taskDefinition' --output text | cut -d'/' -f2) --query taskDefinition > task-definition.json
-    - name: Remove unsupported fields from task definition
-      run: |
-        jq 'del(.enableFaultInjection)' task-definition.json > task-definition-clean.json
-        mv task-definition-clean.json task-definition.json
-
-    - name: Fill in new image in task definition
-      id: task-def
-      uses: aws-actions/amazon-ecs-render-task-definition@v1
+    - name: Setup Terraform
+      uses: hashicorp/setup-terraform@v3
       with:
-        task-definition: task-definition.json
-        container-name: ${{ env.CONTAINER_NAME }}
-        image: ${{ steps.build-image.outputs.image }}
+        terraform_version: ${{ env.TF_VERSION }}
     
-    - name: Deploy to ECS
-      uses: aws-actions/amazon-ecs-deploy-task-definition@v1
-      with:
-        task-definition: ${{ steps.task-def.outputs.task-definition }}
-        service: ${{ env.ECS_SERVICE }}
-        cluster: ${{ env.ECS_CLUSTER }}
-        wait-for-service-stability: true
+    - name: Terraform Init
+      working-directory: ./Terraform
+      run: terraform init
+    
+    - name: Terraform Plan
+      working-directory: ./Terraform
+      env:
+        TF_VAR_image_tag: ${{ steps.build-image.outputs.image_tag }}
+      run: terraform plan -out=tfplan
+    
+    - name: Terraform Apply
+      working-directory: ./Terraform
+      env:
+        TF_VAR_image_tag: ${{ steps.build-image.outputs.image_tag }}
+      run: terraform apply -auto-approve tfplan
+    
+    - name: Deployment Summary
+      run: |
+        echo "### Deployment Complete! :rocket:" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "**Image Tag:** \`${{ steps.build-image.outputs.image_tag }}\`" >> $GITHUB_STEP_SUMMARY
+        echo "**Image URI:** \`${{ steps.build-image.outputs.image }}\`" >> $GITHUB_STEP_SUMMARY
