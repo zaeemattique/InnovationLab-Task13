@@ -7,7 +7,7 @@ on:
 env:
   AWS_REGION: us-west-2
   ECR_REGISTRY: 880958245574.dkr.ecr.us-west-2.amazonaws.com
-  ECR_REPOSITORY: /task13/zaeem
+  ECR_REPOSITORY: task13/zaeem
   ECS_SERVICE: Task13-ECS-Service-Zaeem
   ECS_CLUSTER: Task13-ECS-Cluster-Zaeem
   CONTAINER_NAME: NodeJS-App
