@@ -8,7 +8,9 @@ The application is containerized using Docker, stored in Amazon ECR, and deploye
 
 ---
 
-## High-Level Architecture
+## Architecture
+
+![alt text](https://raw.githubusercontent.com/zaeemattique/InnovationLab-Task12/refs/heads/main/Task12%20Architecture%20Diagram.jpg)
 
 The solution consists of the following components:
 
