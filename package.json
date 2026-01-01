@@ -7,11 +7,12 @@
     "start": "node index.js"
   },
   "dependencies": {
-    "dotenv": "^17.2.3",
-    "express": "^4.13.3"
+    "express": "^4.15.2",
+    "dotenv": "^16.4.5"
   },
   "engines": {
-    "node": "4.0.0"
+    "node": "18.x",
+    "npm": ">=6.0.0"
   },
   "repository": {
     "type": "git",
